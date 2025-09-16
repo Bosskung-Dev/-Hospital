@@ -1,63 +1,47 @@
-require('dotenv').config();
 const express = require('express');
 const nodemailer = require('nodemailer');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware: อ่าน JSON body
 app.use(express.json());
-
-// Serve static files จาก public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ตรวจสอบ Environment Variables
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  console.warn('⚠️  EMAIL_USER or EMAIL_PASS not set in environment variables');
-}
-
-// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,   // your_email@gmail.com
-    pass: process.env.EMAIL_PASS    // App Password ของ Gmail
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
-// หน้า index.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.post('/send-email', (req, res) => {
+  const { text, to } = req.body;
 
-// API: รับข้อความจาก client แล้วส่งอีเมล
-app.post('/send-email', async (req, res) => {
-  try {
-    const { text, subject, to } = req.body;
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ success: false, error: 'No text provided' });
+  }
 
-    if (!text || text.trim() === '') {
-      return res.status(400).json({ ok: false, error: 'No text provided' });
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: to || process.env.EMAIL_USER,
+    subject: 'ข้อความจากเว็บ',
+    text: text
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('❌ ส่งอีเมลล้มเหลว:', err);
+      res.status(500).json({ success: false, error: err.toString() }); // <-- แปลงเป็น string
+    } else {
+      console.log('✅ ส่งสำเร็จ:', info.response);
+      res.json({ success: true, response: info.response });
     }
-
-    // ถ้าไม่มี to ให้ส่งไปที่ EMAIL_USER เอง
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: to || process.env.EMAIL_USER,
-      subject: subject || 'แจ้งเตือนจากแอปเสียง',
-      text: text
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent:', info.messageId);
-    res.json({ ok: true, info });
-  } catch (err) {
-    console.error('❌ Error sending email:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
+  });
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+  console.log(`Server running at port ${PORT}`);
 });
