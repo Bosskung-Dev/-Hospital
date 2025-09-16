@@ -40,9 +40,10 @@ app.post('/send-email', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'No text provided' });
     }
 
+    // ถ้าไม่มี to ให้ส่งไปที่ EMAIL_USER เอง
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: to || process.env.DEFAULT_TO,  // ถ้า client ไม่ส่งค่า to
+      to: to || process.env.EMAIL_USER,
       subject: subject || 'แจ้งเตือนจากแอปเสียง',
       text: text
     };
