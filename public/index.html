@@ -18,7 +18,11 @@
         recognition.continuous = false; // ฟังครั้งละประโยค แล้วรีสตาร์ท
 
         async function startListening() {
-            recognition.start();
+            try {
+                recognition.start();
+            } catch (err) {
+                console.error('Error starting recognition:', err);
+            }
         }
 
         recognition.onstart = () => {
@@ -26,15 +30,17 @@
         };
 
         recognition.onresult = async (event) => {
-            const message = event.results[0][0].transcript;
-            status.textContent = 'คุณพูด: ' + message;
+            const text = event.results[0][0].transcript.trim();
+            if (!text) return; // ถ้าไม่พูดอะไรเลย ไม่ส่ง
+
+            status.textContent = 'คุณพูด: ' + text;
 
             // ส่งไป backend
             try {
                 const response = await fetch('/send-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ text }) // <-- ส่ง key เป็น text
                 });
                 const data = await response.json();
                 if(data.success){
@@ -46,29 +52,20 @@
                 status.textContent += ' → เกิดข้อผิดพลาด: ' + err;
             }
 
-            // หน่วงเวลา 1 วินาทีแล้วเริ่มฟังใหม่
-            setTimeout(() => {
-                startListening();
-            }, 5000);
+            // เริ่มฟังใหม่หลังหน่วงเวลา 1 วินาที
+            setTimeout(startListening, 1000);
         };
 
         recognition.onerror = (event) => {
             status.textContent = 'เกิดข้อผิดพลาด: ' + event.error;
-
-            // ถ้า error ก็ลองเริ่มฟังใหม่หลังหน่วงเวลา
-            setTimeout(() => {
-                startListening();
-            }, 5000);
+            setTimeout(startListening, 2000);
         };
 
         recognition.onend = () => {
-            // ถ้า session จบโดยไม่ได้พูด ให้เริ่มฟังใหม่หลังหน่วงเวลา
-            setTimeout(() => {
-                startListening();
-            }, 3000);
+            // รีสตาร์ท session ถ้าไม่ได้พูด
+            setTimeout(startListening, 1000);
         };
 
-        // เริ่มฟังทันทีเมื่อโหลดหน้าเว็บ
         window.onload = () => {
             startListening();
         };
