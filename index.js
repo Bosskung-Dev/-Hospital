@@ -1,14 +1,16 @@
 require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
-app.use(express.static('public')); // serve index.html จากโฟลเดอร์ public
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -17,15 +19,22 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// API: รับข้อความจาก frontend แล้วส่งอีเมล
 app.post('/send-email', (req, res) => {
-    const { message } = req.body;
+    const { text, to } = req.body;
 
-    transporter.sendMail({
+    if (!text || text.trim() === '') {
+        return res.status(400).json({ error: 'No text provided' });
+    }
+
+    const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: 'recipient@example.com', // เปลี่ยนเป็นเมลที่ต้องการส่ง
+        to: to || process.env.EMAIL_USER, // ถ้าไม่ได้ส่ง to ให้ส่งไปที่ EMAIL_USER
         subject: 'ข้อความจากเว็บ',
-        text: message
-    }, (err, info) => {
+        text: text
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
         if (err) {
             console.error('❌ ส่งอีเมลล้มเหลว:', err);
             res.status(500).json({ error: err.toString() });
@@ -37,5 +46,5 @@ app.post('/send-email', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running at port ${PORT}`);
 });
