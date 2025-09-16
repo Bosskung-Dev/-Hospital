@@ -14,16 +14,16 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ตรวจสอบ Environment Variables
-if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.warn('⚠️  SMTP_USER or SMTP_PASS not set in environment variables');
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.warn('⚠️  EMAIL_USER or EMAIL_PASS not set in environment variables');
 }
 
 // ตั้งค่า Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.SMTP_USER,   // your_email@gmail.com
-    pass: process.env.SMTP_PASS    // App password ของ Gmail
+    user: process.env.EMAIL_USER,   // your_email@gmail.com
+    pass: process.env.EMAIL_PASS    // App password ของ Gmail
   }
 });
 
@@ -42,7 +42,7 @@ app.post('/send-email', async (req, res) => {
     }
 
     const mailOptions = {
-      from: process.env.SMTP_USER,
+      from: process.env.EMAIL_USER,
       to: to || process.env.DEFAULT_TO,          // ถ้า client ไม่ส่งค่า to
       subject: subject || 'แจ้งเตือนจากแอปเสียง',
       text: text
@@ -61,3 +61,4 @@ app.post('/send-email', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
